@@ -17,7 +17,7 @@ def test_flight_tool_execution():
     flights = get_flight_info(origin="HAN", destination="SGN", max_price=2000000)
     assert isinstance(flights, list)
     assert len(flights) == 2
-    assert flights[0]["flight_number"] == "VN213" or flights[1]["flight_number"] == "VJ151"
+    assert {f["flight_number"] for f in flights} == {"VN213", "VJ151"}
 
 def test_weather_tool_execution():
     weather = get_weather_forecast(city_code="SGN")
@@ -45,14 +45,14 @@ def test_react_agent_single_step_flight():
     agent = ReActAgent(max_iterations=5)
     res = agent.run("Có chuyến bay nào từ HAN đi DAD giá dưới 1.5 triệu không?")
     assert res["status"] == "completed"
-    assert res["iterations"] == 1
+    assert res["iterations"] == 2  # 1 lượt gọi tool + 1 lượt Final Answer
     assert "QH202" in res["answer"]
 
 def test_react_agent_single_step_weather():
     agent = ReActAgent(max_iterations=5)
     res = agent.run("Thời tiết ở Đà Nẵng DAD hiện tại thế nào?")
     assert res["status"] == "completed"
-    assert res["iterations"] == 1
+    assert res["iterations"] == 2  # 1 lượt gọi tool + 1 lượt Final Answer
     assert "28°C" in res["answer"]
 
 def test_react_agent_faq_no_tool_call():
@@ -66,7 +66,9 @@ def test_react_agent_max_iterations_safeguard():
     agent = ReActAgent(max_iterations=2)
     # Asking a multi-step query with max_iterations=2 forces safeguard limit
     res = agent.run("Tìm cho tôi chuyến bay từ HAN đi SGN dưới 2 triệu, rồi cho biết thời tiết SGN nên mặc gì?")
-    assert res["status"] == "completed" or res["status"] == "max_iterations_reached"
+    assert res["status"] == "max_iterations_reached"
+    assert res["iterations"] == 2
+    assert len(res["trace"]) == 2
 
 if __name__ == "__main__":
     sys.exit(pytest.main([__file__]))
